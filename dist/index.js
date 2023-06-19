@@ -491,6 +491,11 @@ class IssuesProcessor {
                 IssuesProcessor._endIssueProcessing(issue);
                 return; // Don't process locked issues
             }
+            if (issue.isPinned) {
+                issueLogger.info(`Skipping this issue beacause it is pinned`);
+                IssuesProcessor._endIssueProcessing(issue);
+                return; // Don't process pinned issues
+            }
             if (this._isIncludeOnlyAssigned(issue)) {
                 issueLogger.info(`Skipping this $$type because its assignees list is empty`);
                 IssuesProcessor._endIssueProcessing(issue);
@@ -2169,7 +2174,7 @@ exports.isPullRequest = isPullRequest;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.shouldMarkWhenStale = void 0;
 function shouldMarkWhenStale(daysBeforeStale, isPinned) {
-    return daysBeforeStale >= 0 || !!isPinned;
+    return daysBeforeStale >= 0;
 }
 exports.shouldMarkWhenStale = shouldMarkWhenStale;
 
