@@ -523,7 +523,7 @@ class IssuesProcessor {
             }
             issueLogger.info(`Days before $$type stale: ${logger_service_1.LoggerService.cyan(daysBeforeStale)}`);
             core.debug(`is_pinned: ${isPinned}}`);
-            const shouldMarkAsStale = (0, should_mark_when_stale_1.shouldMarkWhenStale)(daysBeforeStale, isPinned);
+            const shouldMarkAsStale = (0, should_mark_when_stale_1.shouldMarkWhenStale)(daysBeforeStale);
             // Try to remove the close label when not close/locked issue or PR
             yield this._removeCloseLabel(issue, closeLabel);
             if (this.options.startDate) {
@@ -2173,7 +2173,7 @@ exports.isPullRequest = isPullRequest;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.shouldMarkWhenStale = void 0;
-function shouldMarkWhenStale(daysBeforeStale, isPinned) {
+function shouldMarkWhenStale(daysBeforeStale) {
     return daysBeforeStale >= 0;
 }
 exports.shouldMarkWhenStale = shouldMarkWhenStale;

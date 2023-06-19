@@ -304,7 +304,7 @@ export class IssuesProcessor {
     );
 
     core.debug(`is_pinned: ${isPinned}}`)
-    const shouldMarkAsStale: boolean = shouldMarkWhenStale(daysBeforeStale, isPinned);
+    const shouldMarkAsStale: boolean = shouldMarkWhenStale(daysBeforeStale);
 
     // Try to remove the close label when not close/locked issue or PR
     await this._removeCloseLabel(issue, closeLabel);
