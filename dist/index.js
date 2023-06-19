@@ -517,6 +517,7 @@ class IssuesProcessor {
                 issueLogger.info(logger_service_1.LoggerService.white('└──'), `Continuing the process for this $$type`);
             }
             issueLogger.info(`Days before $$type stale: ${logger_service_1.LoggerService.cyan(daysBeforeStale)}`);
+            core.debug(`is_pinned: ${isPinned}}`);
             const shouldMarkAsStale = (0, should_mark_when_stale_1.shouldMarkWhenStale)(daysBeforeStale, isPinned);
             // Try to remove the close label when not close/locked issue or PR
             yield this._removeCloseLabel(issue, closeLabel);

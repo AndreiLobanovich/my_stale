@@ -297,6 +297,7 @@ export class IssuesProcessor {
       `Days before $$type stale: ${LoggerService.cyan(daysBeforeStale)}`
     );
 
+    core.debug(`is_pinned: ${isPinned}}`)
     const shouldMarkAsStale: boolean = shouldMarkWhenStale(daysBeforeStale, isPinned);
 
     // Try to remove the close label when not close/locked issue or PR
