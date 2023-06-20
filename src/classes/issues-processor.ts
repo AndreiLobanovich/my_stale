@@ -577,7 +577,7 @@ export class IssuesProcessor {
       const query = `
       query ($owner: String!, $repo: String!, $issueEndCursor: String, $prEndCursor: String) {
         repository(owner: $owner, name: $repo) {
-          issues(first: 100, after: $endCursor, states: OPEN) {
+          issues(first: 100, after: $issueEndCursor, states: OPEN) {
             nodes {
               title
               number
