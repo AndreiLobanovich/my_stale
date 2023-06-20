@@ -736,7 +736,6 @@ class IssuesProcessor {
       `;
                 this.operations.consumeOperation();
                 const issues = [];
-                core.debug(`!!!! ${hasNextIssuePage} | ${hasNextPullRequestPage}`);
                 if (hasNextIssuePage || hasNextPullRequestPage) {
                     const resp = yield this.graphqlClient(query, {
                         owner: github_1.context.repo.owner,
@@ -750,6 +749,9 @@ class IssuesProcessor {
                     pullRequestEndCursor = resp.repository.pullRequests.pageInfo.endCursor;
                     for (const issue of resp.repository.issues.nodes.map(node => new issue_1.Issue(this.options, node))) {
                         issues.push(issue);
+                    }
+                    for (const pullRequest of resp.repository.pullRequests.nodes.map(node => new issue_1.Issue(this.options, node))) {
+                        issues.push(pullRequest);
                     }
                     (_a = this.statistics) === null || _a === void 0 ? void 0 : _a.incrementFetchedItemsCount(issues.length);
                 }

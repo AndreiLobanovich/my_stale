@@ -637,7 +637,6 @@ export class IssuesProcessor {
       `;
       this.operations.consumeOperation();
       const issues: Issue[] = [];
-      core.debug(`!!!! ${hasNextIssuePage} | ${hasNextPullRequestPage}`)
       if (hasNextIssuePage || hasNextPullRequestPage) {
         const resp: IGraphQlResponse = await this.graphqlClient(query, {
           owner: context.repo.owner,
@@ -651,6 +650,9 @@ export class IssuesProcessor {
         pullRequestEndCursor = resp.repository.pullRequests.pageInfo.endCursor;
         for (const issue of resp.repository.issues.nodes.map(node => new Issue(this.options, node))) {
           issues.push(issue)
+        }
+        for (const pullRequest of resp.repository.pullRequests.nodes.map(node => new Issue(this.options, node))) {
+          issues.push(pullRequest)
         }
         this.statistics?.incrementFetchedItemsCount(issues.length)
     }
