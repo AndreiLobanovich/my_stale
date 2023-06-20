@@ -577,7 +577,7 @@ export class IssuesProcessor {
       const query = `
       query ($owner: String!, $repo: String!, $issueEndCursor: String, $pullRequestEndCursor: String) {
         repository(owner: $owner, name: $repo) {
-          issues(first: 100, after: $issueEndCursor, states: OPEN) {
+          issues(first: 2, after: $issueEndCursor, states: OPEN) {
             nodes {
               title
               number
@@ -605,7 +605,7 @@ export class IssuesProcessor {
               hasNextPage
             }
           }
-          pullRequests(first: 100, after: $pullRequestEndCursor, states: OPEN) {
+          pullRequests(first: 2, after: $pullRequestEndCursor, states: OPEN) {
             nodes {
               title
               number
@@ -637,6 +637,7 @@ export class IssuesProcessor {
       `;
       this.operations.consumeOperation();
       const issues: Issue[] = [];
+      core.debug(`!!!! ${hasNextIssuePage} | ${hasNextPullRequestPage}`)
       if (hasNextIssuePage || hasNextPullRequestPage) {
         const resp: IGraphQlResponse = await this.graphqlClient(query, {
           owner: context.repo.owner,

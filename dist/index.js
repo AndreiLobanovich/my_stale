@@ -676,7 +676,7 @@ class IssuesProcessor {
                 const query = `
       query ($owner: String!, $repo: String!, $issueEndCursor: String, $pullRequestEndCursor: String) {
         repository(owner: $owner, name: $repo) {
-          issues(first: 100, after: $issueEndCursor, states: OPEN) {
+          issues(first: 2, after: $issueEndCursor, states: OPEN) {
             nodes {
               title
               number
@@ -704,7 +704,7 @@ class IssuesProcessor {
               hasNextPage
             }
           }
-          pullRequests(first: 100, after: $pullRequestEndCursor, states: OPEN) {
+          pullRequests(first: 2, after: $pullRequestEndCursor, states: OPEN) {
             nodes {
               title
               number
@@ -736,6 +736,7 @@ class IssuesProcessor {
       `;
                 this.operations.consumeOperation();
                 const issues = [];
+                core.debug(`!!!! ${hasNextIssuePage} | ${hasNextPullRequestPage}`);
                 if (hasNextIssuePage || hasNextPullRequestPage) {
                     const resp = yield this.graphqlClient(query, {
                         owner: github_1.context.repo.owner,
