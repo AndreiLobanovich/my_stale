@@ -11,5 +11,9 @@ export interface IGraphQlResponse {
       nodes: IIssue[];
       pageInfo: pageInfo;
     };
+    pullRequests: {
+      nodes: IIssue[];
+      pageInfo: pageInfo;
+    }
   };
 }

@@ -106,11 +106,15 @@ export class IssuesProcessor {
     }
   }
 
-  async processIssues(endCursor: string | null = null, hasNextPage = true): Promise<number> {
+  async processIssues(
+    issueEndCursor: string | null = null, 
+    pullRequestEndCursor: string | null = null, 
+    hasNextIssuePage = true,
+    hasNextPullRequestPage = true): Promise<number> {
     // get the next batch of issues
 
     let issues: Issue[];
-    [endCursor, hasNextPage, issues] = await this.getIssuesFromGraphql(endCursor, hasNextPage);
+    [issueEndCursor, pullRequestEndCursor, hasNextIssuePage, hasNextPullRequestPage, issues] = await this.getIssues(issueEndCursor, pullRequestEndCursor, hasNextIssuePage, hasNextPullRequestPage);
     if (issues.length <= 0) {
       this._logger.info(
         LoggerService.green(`No more issues found to process. Exiting...`)
@@ -187,7 +191,7 @@ export class IssuesProcessor {
     );
 
     // Do the next batch
-    return this.processIssues(endCursor, hasNextPage);
+    return this.processIssues(issueEndCursor, pullRequestEndCursor, hasNextIssuePage, hasNextPullRequestPage);
   }
 
   async processIssue(
@@ -563,79 +567,93 @@ export class IssuesProcessor {
     }
   }
 
-  async getIssuesFromGraphql(endCursor: string | null, hasNextPage: boolean): Promise<[string | null, boolean, Issue[]]> {
+  async getIssues(
+    issueEndCursor: string | null, 
+    pullRequestEndCursor: string | null, 
+    hasNextIssuePage: boolean,
+    hasNextPullRequestPage: boolean)
+    : Promise<[string | null, string | null, boolean, boolean, Issue[]]> {
     try {
       const query = `
-        query ($owner: String!, $repo: String!, $endCursor: String) {
-          repository(owner: $owner, name: $repo) {
-            issues(first: 100, after: $endCursor) {
-              nodes {
+      query ($owner: String!, $repo: String!, $issueEndCursor: String, $prEndCursor: String) {
+        repository(owner: $owner, name: $repo) {
+          issues(first: 100, after: $endCursor) {
+            nodes {
+              title
+              number
+              createdAt
+              updatedAt
+              labels(first: 100) {
+                nodes {
+                  name
+                }
+              }
+              isPinned
+              state
+              locked
+              milestone {
                 title
-                number
-                createdAt
-                updatedAt
-                labels(first: 10) {
-                  nodes {
-                    name
-                  }
-                }
-                isPinned
-                state
-                locked
-                milestone {
-                  title
-                }
-                assignees(first: 100) {
-                  nodes {
-                    login
-                  }
+              }
+              assignees(first: 100) {
+                nodes {
+                  login
                 }
               }
-              pageInfo {
-                endCursor
-                hasNextPage
+            }
+            pageInfo {
+              endCursor
+              hasNextPage
+            }
+          }
+          pullRequests(first: 100, after: $prEndCursor) {
+            nodes {
+              title
+              number
+              createdAt
+              updatedAt
+              labels(first: 100) {
+                nodes {
+                  name
+                }
               }
+              state
+              locked
+              milestone {
+                title
+              }
+              assignees(first: 100) {
+                nodes {
+                  login
+                }
+              }
+            }
+            pageInfo {
+              endCursor
+              hasNextPage
             }
           }
         }
+      }
       `;
       this.operations.consumeOperation();
       const issues: Issue[] = [];
-      if (hasNextPage) {
+      if (hasNextIssuePage || hasNextPullRequestPage) {
         const resp: IGraphQlResponse = await this.graphqlClient(query, {
           owner: context.repo.owner,
           repo: context.repo.repo,
-          endCursor: endCursor
+          issueEndCursor,
+          pullRequestEndCursor
         });
-        hasNextPage = resp.repository.issues.pageInfo.hasNextPage;
-        endCursor = resp.repository.issues.pageInfo.endCursor;
+        hasNextIssuePage = resp.repository.issues.pageInfo.hasNextPage;
+        hasNextPullRequestPage = resp.repository.pullRequests.pageInfo.hasNextPage;
+        issueEndCursor = resp.repository.issues.pageInfo.endCursor;
+        pullRequestEndCursor = resp.repository.pullRequests.pageInfo.endCursor;
         for (const issue of resp.repository.issues.nodes.map(node => new Issue(this.options, node))) {
           issues.push(issue)
         }
         this.statistics?.incrementFetchedItemsCount(issues.length)
     }
-      return [endCursor, hasNextPage, issues];
-    } catch (error) {
-      throw Error(`Getting issues was blocked by the error: ${error.message}`);
-    }
-  }
-
-  // grab issues from github in batches of 100
-  async getIssues(page: number): Promise<Issue[]> {
-    try {
-      this.operations.consumeOperation();
-      const issueResult = await this.client.rest.issues.listForRepo({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        state: 'open',
-        per_page: 100,
-        direction: this.options.ascending ? 'asc' : 'desc',
-        page
-      });
-      this.statistics?.incrementFetchedItemsCount(issueResult.data.length);
-      return issueResult.data.map(
-        (issue: Readonly<OctokitIssue>): Issue => new Issue(this.options, issue)
-      );
+      return [issueEndCursor, pullRequestEndCursor, hasNextIssuePage, hasNextPullRequestPage, issues];
     } catch (error) {
       throw Error(`Getting issues was blocked by the error: ${error.message}`);
     }
