@@ -417,12 +417,12 @@ class IssuesProcessor {
             this.statistics = new statistics_1.Statistics();
         }
     }
-    processIssues(endCursor = null, hasNextPage = true) {
+    processIssues(issueEndCursor = null, pullRequestEndCursor = null, hasNextIssuePage = true, hasNextPullRequestPage = true) {
         var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
             // get the next batch of issues
             let issues;
-            [endCursor, hasNextPage, issues] = yield this.getIssuesFromGraphql(endCursor, hasNextPage);
+            [issueEndCursor, pullRequestEndCursor, hasNextIssuePage, hasNextPullRequestPage, issues] = yield this.getIssues(issueEndCursor, pullRequestEndCursor, hasNextIssuePage, hasNextPullRequestPage);
             if (issues.length <= 0) {
                 this._logger.info(logger_service_1.LoggerService.green(`No more issues found to process. Exiting...`));
                 (_a = this.statistics) === null || _a === void 0 ? void 0 : _a.setOperationsCount(this.operations.getConsumedOperationsCount()).logStats();
@@ -452,7 +452,7 @@ class IssuesProcessor {
             }
             this._logger.info(`${logger_service_1.LoggerService.green('Batch ')} ${logger_service_1.LoggerService.cyan(`#${1}`)} ${logger_service_1.LoggerService.green(' processed.')}`);
             // Do the next batch
-            return this.processIssues(endCursor, hasNextPage);
+            return this.processIssues(issueEndCursor, pullRequestEndCursor, hasNextIssuePage, hasNextPullRequestPage);
         });
     }
     processIssue(issue, labelsToAddWhenUnstale, labelsToRemoveWhenUnstale, labelsToRemoveWhenStale) {
@@ -669,82 +669,90 @@ class IssuesProcessor {
             }
         });
     }
-    getIssuesFromGraphql(endCursor, hasNextPage) {
+    getIssues(issueEndCursor, pullRequestEndCursor, hasNextIssuePage, hasNextPullRequestPage) {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const query = `
-        query ($owner: String!, $repo: String!, $endCursor: String) {
-          repository(owner: $owner, name: $repo) {
-            issues(first: 100, after: $endCursor) {
-              nodes {
+      query ($owner: String!, $repo: String!, $issueEndCursor: String, $prEndCursor: String) {
+        repository(owner: $owner, name: $repo) {
+          issues(first: 100, after: $endCursor, states: OPEN) {
+            nodes {
+              title
+              number
+              createdAt
+              updatedAt
+              labels(first: 100) {
+                nodes {
+                  name
+                }
+              }
+              isPinned
+              state
+              locked
+              milestone {
                 title
-                number
-                createdAt
-                updatedAt
-                labels(first: 10) {
-                  nodes {
-                    name
-                  }
-                }
-                isPinned
-                state
-                locked
-                milestone {
-                  title
-                }
-                assignees(first: 100) {
-                  nodes {
-                    login
-                  }
+              }
+              assignees(first: 100) {
+                nodes {
+                  login
                 }
               }
-              pageInfo {
-                endCursor
-                hasNextPage
+            }
+            pageInfo {
+              endCursor
+              hasNextPage
+            }
+          }
+          pullRequests(first: 100, after: $prEndCursor, states: OPEN) {
+            nodes {
+              title
+              number
+              createdAt
+              updatedAt
+              labels(first: 100) {
+                nodes {
+                  name
+                }
               }
+              state
+              locked
+              milestone {
+                title
+              }
+              assignees(first: 100) {
+                nodes {
+                  login
+                }
+              }
+            }
+            pageInfo {
+              endCursor
+              hasNextPage
             }
           }
         }
+      }
       `;
                 this.operations.consumeOperation();
                 const issues = [];
-                if (hasNextPage) {
+                if (hasNextIssuePage || hasNextPullRequestPage) {
                     const resp = yield this.graphqlClient(query, {
                         owner: github_1.context.repo.owner,
                         repo: github_1.context.repo.repo,
-                        endCursor: endCursor
+                        issueEndCursor,
+                        pullRequestEndCursor
                     });
-                    hasNextPage = resp.repository.issues.pageInfo.hasNextPage;
-                    endCursor = resp.repository.issues.pageInfo.endCursor;
+                    hasNextIssuePage = resp.repository.issues.pageInfo.hasNextPage;
+                    hasNextPullRequestPage = resp.repository.pullRequests.pageInfo.hasNextPage;
+                    issueEndCursor = resp.repository.issues.pageInfo.endCursor;
+                    pullRequestEndCursor = resp.repository.pullRequests.pageInfo.endCursor;
                     for (const issue of resp.repository.issues.nodes.map(node => new issue_1.Issue(this.options, node))) {
                         issues.push(issue);
                     }
                     (_a = this.statistics) === null || _a === void 0 ? void 0 : _a.incrementFetchedItemsCount(issues.length);
                 }
-                return [endCursor, hasNextPage, issues];
-            }
-            catch (error) {
-                throw Error(`Getting issues was blocked by the error: ${error.message}`);
-            }
-        });
-    }
-    // grab issues from github in batches of 100
-    getIssues(page) {
-        var _a;
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                this.operations.consumeOperation();
-                const issueResult = yield this.client.rest.issues.listForRepo({
-                    owner: github_1.context.repo.owner,
-                    repo: github_1.context.repo.repo,
-                    state: 'open',
-                    per_page: 100,
-                    direction: this.options.ascending ? 'asc' : 'desc',
-                    page
-                });
-                (_a = this.statistics) === null || _a === void 0 ? void 0 : _a.incrementFetchedItemsCount(issueResult.data.length);
-                return issueResult.data.map((issue) => new issue_1.Issue(this.options, issue));
+                return [issueEndCursor, pullRequestEndCursor, hasNextIssuePage, hasNextPullRequestPage, issues];
             }
             catch (error) {
                 throw Error(`Getting issues was blocked by the error: ${error.message}`);
