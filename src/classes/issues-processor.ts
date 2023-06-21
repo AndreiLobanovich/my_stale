@@ -205,7 +205,7 @@ export class IssuesProcessor {
     const issueLogger: IssueLogger = new IssueLogger(issue);
     issueLogger.info(
       `Found this $$type last updated at: ${LoggerService.cyan(
-        issue.updated_at
+        issue.createdAt
       )}`
     );
 
@@ -315,7 +315,7 @@ export class IssuesProcessor {
 
     if (this.options.startDate) {
       const startDate: Date = new Date(this.options.startDate);
-      const createdAt: Date = new Date(issue.created_at);
+      const createdAt: Date = new Date(issue.createdAt);
 
       issueLogger.info(
         `A start date was specified for the ${getHumanizedDate(
@@ -335,7 +335,7 @@ export class IssuesProcessor {
       issueLogger.info(
         `$$type created the ${getHumanizedDate(
           createdAt
-        )} (${LoggerService.cyan(issue.created_at)})`
+        )} (${LoggerService.cyan(issue.createdAt)})`
       );
 
       if (!isDateMoreRecentThan(createdAt, startDate)) {
@@ -466,14 +466,14 @@ export class IssuesProcessor {
       // Ignore the last update and only use the creation date
       if (shouldIgnoreUpdates) {
         shouldBeStale = !IssuesProcessor._updatedSince(
-          issue.created_at,
+          issue.createdAt,
           daysBeforeStale
         );
       }
       // Use the last update to check if we need to stale
       else {
         shouldBeStale = !IssuesProcessor._updatedSince(
-          issue.updated_at,
+          issue.updatedAt,
           daysBeforeStale
         );
       }
@@ -482,14 +482,14 @@ export class IssuesProcessor {
         if (shouldIgnoreUpdates) {
           issueLogger.info(
             `This $$type should be stale based on the creation date the ${getHumanizedDate(
-              new Date(issue.created_at)
-            )} (${LoggerService.cyan(issue.created_at)})`
+              new Date(issue.updatedAt)
+            )} (${LoggerService.cyan(issue.createdAt)})`
           );
         } else {
           issueLogger.info(
             `This $$type should be stale based on the last update date the ${getHumanizedDate(
-              new Date(issue.updated_at)
-            )} (${LoggerService.cyan(issue.updated_at)})`
+              new Date(issue.updatedAt)
+            )} (${LoggerService.cyan(issue.updatedAt)})`
           );
         }
 
@@ -514,14 +514,14 @@ export class IssuesProcessor {
         if (shouldIgnoreUpdates) {
           issueLogger.info(
             `This $$type should not be stale based on the creation date the ${getHumanizedDate(
-              new Date(issue.created_at)
-            )} (${LoggerService.cyan(issue.created_at)})`
+              new Date(issue.createdAt)
+            )} (${LoggerService.cyan(issue.createdAt)})`
           );
         } else {
           issueLogger.info(
             `This $$type should not be stale based on the last update date the ${getHumanizedDate(
-              new Date(issue.updated_at)
-            )} (${LoggerService.cyan(issue.updated_at)})`
+              new Date(issue.updatedAt)
+            )} (${LoggerService.cyan(issue.updatedAt)})`
           );
         }
       }
@@ -730,7 +730,7 @@ export class IssuesProcessor {
   ) {
     const issueLogger: IssueLogger = new IssueLogger(issue);
     const markedStaleOn: string =
-      (await this.getLabelCreationDate(issue, staleLabel)) || issue.updated_at;
+      (await this.getLabelCreationDate(issue, staleLabel)) || issue.updatedAt;
     issueLogger.info(
       `$$type marked stale on: ${LoggerService.cyan(markedStaleOn)}`
     );
@@ -783,7 +783,7 @@ export class IssuesProcessor {
     // The issue.updated_at and markedStaleOn are not always exactly in sync (they can be off by a second or 2)
     // isDateMoreRecentThan makes sure they are not the same date within a certain tolerance (15 seconds in this case)
     const issueHasUpdateSinceStale = isDateMoreRecentThan(
-      new Date(issue.updated_at),
+      new Date(issue.updatedAt),
       new Date(markedStaleOn),
       15
     );
@@ -824,7 +824,7 @@ export class IssuesProcessor {
     }
 
     const issueHasUpdateInCloseWindow: boolean = IssuesProcessor._updatedSince(
-      issue.updated_at,
+      issue.updatedAt,
       daysBeforeClose
     );
     issueLogger.info(
@@ -836,12 +836,12 @@ export class IssuesProcessor {
     if (!issueHasCommentsSinceStale && !issueHasUpdateInCloseWindow) {
       issueLogger.info(
         `Closing $$type because it was last updated on: ${LoggerService.cyan(
-          issue.updated_at
+          issue.updatedAt
         )}`
       );
       await this._closeIssue(issue, closeMessage, closeLabel);
 
-      if (this.options.deleteBranch && issue.pull_request) {
+      if (this.options.deleteBranch && issue.isPullRequest) {
         issueLogger.info(
           `Deleting the branch since the option ${issueLogger.createOptionLink(
             Option.DeleteBranch
@@ -907,7 +907,7 @@ export class IssuesProcessor {
     // if the issue is being marked stale, the updated date should be changed to right now
     // so that close calculations work correctly
     const newUpdatedAtDate: Date = new Date();
-    issue.updated_at = newUpdatedAtDate.toString();
+    issue.updatedAt = newUpdatedAtDate.toString();
 
     if (!skipMessage) {
       try {

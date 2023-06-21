@@ -261,7 +261,6 @@ exports.IgnoreUpdates = IgnoreUpdates;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Issue = void 0;
 const is_labeled_1 = __nccwpck_require__(6792);
-const is_pull_request_1 = __nccwpck_require__(5400);
 const operations_1 = __nccwpck_require__(7957);
 class Issue {
     constructor(options, issue) {
@@ -269,11 +268,11 @@ class Issue {
         this._options = options;
         this.title = issue.title;
         this.number = issue.number;
-        this.created_at = 'createdAt' in issue ? issue.createdAt : issue.created_at;
-        this.updated_at = 'updatedAt' in issue ? issue.updatedAt : issue.updated_at;
+        this.createdAt = issue.createdAt;
+        this.updatedAt = issue.updatedAt;
         this.labels = 'nodes' in issue.labels ? mapLabels(issue.labels.nodes) : mapLabels(issue.labels);
         this.isPinned = 'isPinned' in issue ? issue.isPinned : null;
-        this.pull_request = issue.pull_request;
+        this.pullRequest = 'isPinned' in issue ? false : true;
         this.state = issue.state;
         this.locked = issue.locked;
         this.milestone = issue.milestone;
@@ -282,7 +281,7 @@ class Issue {
         this.markedStaleThisRun = false;
     }
     get isPullRequest() {
-        return (0, is_pull_request_1.isPullRequest)(this);
+        return !!this.pullRequest;
     }
     get staleLabel() {
         return this._getStaleLabel();
@@ -460,7 +459,7 @@ class IssuesProcessor {
         return __awaiter(this, void 0, void 0, function* () {
             (_a = this.statistics) === null || _a === void 0 ? void 0 : _a.incrementProcessedItemsCount(issue);
             const issueLogger = new issue_logger_1.IssueLogger(issue);
-            issueLogger.info(`Found this $$type last updated at: ${logger_service_1.LoggerService.cyan(issue.updated_at)}`);
+            issueLogger.info(`Found this $$type last updated at: ${logger_service_1.LoggerService.cyan(issue.createdAt)}`);
             // calculate string based messages for this issue
             const staleMessage = issue.isPullRequest
                 ? this.options.stalePrMessage
@@ -528,7 +527,7 @@ class IssuesProcessor {
             yield this._removeCloseLabel(issue, closeLabel);
             if (this.options.startDate) {
                 const startDate = new Date(this.options.startDate);
-                const createdAt = new Date(issue.created_at);
+                const createdAt = new Date(issue.createdAt);
                 issueLogger.info(`A start date was specified for the ${(0, get_humanized_date_1.getHumanizedDate)(startDate)} (${logger_service_1.LoggerService.cyan(this.options.startDate)})`);
                 // Expecting that GitHub will always set a creation date on the issues and PRs
                 // But you never know!
@@ -536,7 +535,7 @@ class IssuesProcessor {
                     IssuesProcessor._endIssueProcessing(issue);
                     core.setFailed(new Error(`Invalid issue field: "created_at". Expected a valid date`));
                 }
-                issueLogger.info(`$$type created the ${(0, get_humanized_date_1.getHumanizedDate)(createdAt)} (${logger_service_1.LoggerService.cyan(issue.created_at)})`);
+                issueLogger.info(`$$type created the ${(0, get_humanized_date_1.getHumanizedDate)(createdAt)} (${logger_service_1.LoggerService.cyan(issue.createdAt)})`);
                 if (!(0, is_date_more_recent_than_1.isDateMoreRecentThan)(createdAt, startDate)) {
                     issueLogger.info(`Skipping this $$type because it was created before the specified start date`);
                     IssuesProcessor._endIssueProcessing(issue);
@@ -606,18 +605,18 @@ class IssuesProcessor {
                 let shouldBeStale;
                 // Ignore the last update and only use the creation date
                 if (shouldIgnoreUpdates) {
-                    shouldBeStale = !IssuesProcessor._updatedSince(issue.created_at, daysBeforeStale);
+                    shouldBeStale = !IssuesProcessor._updatedSince(issue.createdAt, daysBeforeStale);
                 }
                 // Use the last update to check if we need to stale
                 else {
-                    shouldBeStale = !IssuesProcessor._updatedSince(issue.updated_at, daysBeforeStale);
+                    shouldBeStale = !IssuesProcessor._updatedSince(issue.updatedAt, daysBeforeStale);
                 }
                 if (shouldBeStale) {
                     if (shouldIgnoreUpdates) {
-                        issueLogger.info(`This $$type should be stale based on the creation date the ${(0, get_humanized_date_1.getHumanizedDate)(new Date(issue.created_at))} (${logger_service_1.LoggerService.cyan(issue.created_at)})`);
+                        issueLogger.info(`This $$type should be stale based on the creation date the ${(0, get_humanized_date_1.getHumanizedDate)(new Date(issue.updatedAt))} (${logger_service_1.LoggerService.cyan(issue.createdAt)})`);
                     }
                     else {
-                        issueLogger.info(`This $$type should be stale based on the last update date the ${(0, get_humanized_date_1.getHumanizedDate)(new Date(issue.updated_at))} (${logger_service_1.LoggerService.cyan(issue.updated_at)})`);
+                        issueLogger.info(`This $$type should be stale based on the last update date the ${(0, get_humanized_date_1.getHumanizedDate)(new Date(issue.updatedAt))} (${logger_service_1.LoggerService.cyan(issue.updatedAt)})`);
                     }
                     if (shouldMarkAsStale) {
                         issueLogger.info(`This $$type should be marked as stale based on the option ${issueLogger.createOptionLink(this._getDaysBeforeStaleUsedOptionName(issue))} (${logger_service_1.LoggerService.cyan(daysBeforeStale)})`);
@@ -632,10 +631,10 @@ class IssuesProcessor {
                 }
                 else {
                     if (shouldIgnoreUpdates) {
-                        issueLogger.info(`This $$type should not be stale based on the creation date the ${(0, get_humanized_date_1.getHumanizedDate)(new Date(issue.created_at))} (${logger_service_1.LoggerService.cyan(issue.created_at)})`);
+                        issueLogger.info(`This $$type should not be stale based on the creation date the ${(0, get_humanized_date_1.getHumanizedDate)(new Date(issue.createdAt))} (${logger_service_1.LoggerService.cyan(issue.createdAt)})`);
                     }
                     else {
-                        issueLogger.info(`This $$type should not be stale based on the last update date the ${(0, get_humanized_date_1.getHumanizedDate)(new Date(issue.updated_at))} (${logger_service_1.LoggerService.cyan(issue.updated_at)})`);
+                        issueLogger.info(`This $$type should not be stale based on the last update date the ${(0, get_humanized_date_1.getHumanizedDate)(new Date(issue.updatedAt))} (${logger_service_1.LoggerService.cyan(issue.updatedAt)})`);
                     }
                 }
             }
@@ -811,7 +810,7 @@ class IssuesProcessor {
     _processStaleIssue(issue, staleLabel, staleMessage, labelsToAddWhenUnstale, labelsToRemoveWhenUnstale, labelsToRemoveWhenStale, closeMessage, closeLabel) {
         return __awaiter(this, void 0, void 0, function* () {
             const issueLogger = new issue_logger_1.IssueLogger(issue);
-            const markedStaleOn = (yield this.getLabelCreationDate(issue, staleLabel)) || issue.updated_at;
+            const markedStaleOn = (yield this.getLabelCreationDate(issue, staleLabel)) || issue.updatedAt;
             issueLogger.info(`$$type marked stale on: ${logger_service_1.LoggerService.cyan(markedStaleOn)}`);
             const issueHasCommentsSinceStale = yield this._hasCommentsSince(issue, markedStaleOn, staleMessage);
             issueLogger.info(`$$type has been commented on: ${logger_service_1.LoggerService.cyan(issueHasCommentsSinceStale)}`);
@@ -833,7 +832,7 @@ class IssuesProcessor {
             }
             // The issue.updated_at and markedStaleOn are not always exactly in sync (they can be off by a second or 2)
             // isDateMoreRecentThan makes sure they are not the same date within a certain tolerance (15 seconds in this case)
-            const issueHasUpdateSinceStale = (0, is_date_more_recent_than_1.isDateMoreRecentThan)(new Date(issue.updated_at), new Date(markedStaleOn), 15);
+            const issueHasUpdateSinceStale = (0, is_date_more_recent_than_1.isDateMoreRecentThan)(new Date(issue.updatedAt), new Date(markedStaleOn), 15);
             issueLogger.info(`$$type has been updated since it was marked stale: ${logger_service_1.LoggerService.cyan(issueHasUpdateSinceStale)}`);
             // Should we un-stale this issue?
             if (shouldRemoveStaleWhenUpdated &&
@@ -851,12 +850,12 @@ class IssuesProcessor {
             if (daysBeforeClose < 0) {
                 return; // Nothing to do because we aren't closing stale issues
             }
-            const issueHasUpdateInCloseWindow = IssuesProcessor._updatedSince(issue.updated_at, daysBeforeClose);
+            const issueHasUpdateInCloseWindow = IssuesProcessor._updatedSince(issue.updatedAt, daysBeforeClose);
             issueLogger.info(`$$type has been updated in the last ${daysBeforeClose} days: ${logger_service_1.LoggerService.cyan(issueHasUpdateInCloseWindow)}`);
             if (!issueHasCommentsSinceStale && !issueHasUpdateInCloseWindow) {
-                issueLogger.info(`Closing $$type because it was last updated on: ${logger_service_1.LoggerService.cyan(issue.updated_at)}`);
+                issueLogger.info(`Closing $$type because it was last updated on: ${logger_service_1.LoggerService.cyan(issue.updatedAt)}`);
                 yield this._closeIssue(issue, closeMessage, closeLabel);
-                if (this.options.deleteBranch && issue.pull_request) {
+                if (this.options.deleteBranch && issue.isPullRequest) {
                     issueLogger.info(`Deleting the branch since the option ${issueLogger.createOptionLink(option_1.Option.DeleteBranch)} is enabled`);
                     yield this._deleteBranch(issue);
                     this.deletedBranchIssues.push(issue);
@@ -897,7 +896,7 @@ class IssuesProcessor {
             // if the issue is being marked stale, the updated date should be changed to right now
             // so that close calculations work correctly
             const newUpdatedAtDate = new Date();
-            issue.updated_at = newUpdatedAtDate.toString();
+            issue.updatedAt = newUpdatedAtDate.toString();
             if (!skipMessage) {
                 try {
                     this._consumeIssueOperation(issue);
@@ -2158,21 +2157,6 @@ function isLabeled(issue, label) {
     });
 }
 exports.isLabeled = isLabeled;
-
-
-/***/ }),
-
-/***/ 5400:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isPullRequest = void 0;
-function isPullRequest(issue) {
-    return !!issue.pull_request;
-}
-exports.isPullRequest = isPullRequest;
 
 
 /***/ }),
